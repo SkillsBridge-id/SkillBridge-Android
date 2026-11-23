@@ -4,15 +4,16 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const colors = {
   background: '#F7F8F4',
-  ink: '#17231B',
-  muted: '#69766C',
-  green: '#2F8F58',
-  greenPressed: '#267448',
+  ink: '#11474F',
+  muted: '#11474F',
+  green: '#15AD76',
+  greenPressed: '#0F8E60',
 };
 
 export default function App() {
   const [fontsLoaded] = useFonts({
     MarlinSoftBasic: require('./assets/fonts/FontMesa - MarlinSoftBasic-Regular.otf'),
+    MarlinSoftBasicBlack: require('./assets/fonts/FontMesa - MarlinSoftBasic-Black.otf'),
   });
 
   if (!fontsLoaded) {
@@ -33,7 +34,13 @@ export default function App() {
           accessibilityLabel="Get Started"
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
-          <Text style={styles.buttonLabel}>Get Started</Text>
+          <View style={styles.buttonContent}>
+            <Text style={styles.buttonLabel}>Get Started</Text>
+            <View style={styles.buttonArrow}>
+              <View style={styles.arrowLine} />
+              <View style={styles.arrowHead} />
+            </View>
+          </View>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -49,20 +56,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 64,
   },
   hero: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 4,
   },
   title: {
     color: colors.ink,
-    fontFamily: 'MarlinSoftBasic',
+    fontFamily: 'MarlinSoftBasicBlack',
     fontSize: 46,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: 'normal',
+    letterSpacing: -0.6,
     textAlign: 'center',
   },
   subtitle: {
@@ -70,24 +77,55 @@ const styles = StyleSheet.create({
     fontFamily: 'MarlinSoftBasic',
     fontSize: 17,
     fontWeight: '600',
-    letterSpacing: 0.15,
+    letterSpacing: -0.2,
     textAlign: 'center',
   },
   button: {
     alignItems: 'center',
     backgroundColor: colors.green,
-    borderRadius: 16,
+    borderRadius: 999,
     justifyContent: 'center',
-    minHeight: 58,
-    width: '100%',
+    minHeight: 68,
+    width: '78%',
+    alignSelf: 'center',
   },
   buttonPressed: {
     backgroundColor: colors.greenPressed,
     transform: [{ scale: 0.985 }],
   },
+  buttonContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
   buttonLabel: {
     color: '#FFFFFF',
     fontFamily: 'MarlinSoftBasic',
     fontSize: 18,
+    fontWeight: '700',
+  },
+  buttonArrow: {
+    height: 16,
+    marginLeft: 10,
+    position: 'relative',
+    width: 20,
+  },
+  arrowLine: {
+    backgroundColor: '#FFFFFF',
+    height: 2,
+    left: 0,
+    position: 'absolute',
+    right: 1,
+    top: 7,
+  },
+  arrowHead: {
+    borderColor: '#FFFFFF',
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+    height: 9,
+    position: 'absolute',
+    right: 0,
+    top: 3,
+    transform: [{ rotate: '45deg' }],
+    width: 9,
   },
 });

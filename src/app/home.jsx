@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const userName = 'Name';
+const mascotImageUrl = 'https://placehold.co/600x400';
 
 export default function HomeScreen() {
   return (
@@ -10,6 +11,7 @@ export default function HomeScreen() {
       <StatusBar style="dark" />
       <View style={styles.content}>
         <Text style={styles.greeting}>Hi, {userName}</Text>
+        <Text style={styles.levelTagline}>Keep going to level up!</Text>
         <LinearGradient
           colors={['#EBF8F8', '#EBF8F8', '#DAF4E6', '#DAF4E6']}
           end={{ x: 0.5, y: 1 }}
@@ -18,6 +20,15 @@ export default function HomeScreen() {
           style={styles.levelCard}
         >
           <Text style={styles.levelLabel}>Level 12</Text>
+          <Text style={styles.levelProgress}>680 / 1000 XP</Text>
+          <View style={styles.progressTrack}>
+            <View style={styles.progressFill} />
+          </View>
+          <Image
+            accessibilityLabel="SkillsBridge mascot placeholder"
+            source={{ uri: mascotImageUrl }}
+            style={styles.mascot}
+          />
         </LinearGradient>
       </View>
     </SafeAreaView>
@@ -32,7 +43,7 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'flex-start',
     paddingHorizontal: 32,
-    paddingTop: 88,
+    paddingTop: 56,
   },
   greeting: {
     color: '#12212C',
@@ -53,9 +64,44 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   levelLabel: {
-    color: '#12202C',
+    color: '#2B3D44',
     fontFamily: 'sans-serif',
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
+  },
+  levelProgress: {
+    color: '#2B3D44',
+    fontFamily: 'sans-serif',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 5,
+  },
+  progressTrack: {
+    backgroundColor: '#C9EBE3',
+    borderRadius: 6,
+    height: 12,
+    marginTop: 12,
+    overflow: 'hidden',
+    width: 160,
+  },
+  progressFill: {
+    backgroundColor: '#16B276',
+    borderRadius: 6,
+    height: '100%',
+    width: '68%',
+  },
+  levelTagline: {
+    color: '#636E76',
+    fontFamily: 'sans-serif',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  mascot: {
+    bottom: 10,
+    height: 76,
+    position: 'absolute',
+    right: 14,
+    width: 114,
   },
 });

@@ -1,5 +1,5 @@
-import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const colors = {
@@ -10,15 +10,10 @@ const colors = {
   greenPressed: '#0F8E60',
 };
 
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    MarlinSoftBasic: require('./assets/fonts/FontMesa - MarlinSoftBasic-Regular.otf'),
-    MarlinSoftBasicBlack: require('./assets/fonts/FontMesa - MarlinSoftBasic-Black.otf'),
-  });
-
-  if (!fontsLoaded) {
-    return null;
-  }
+export default function LandingScreen() {
+  const handleGetStarted = () => {
+    router.replace('/home');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -32,6 +27,7 @@ export default function App() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Get Started"
+          onPress={handleGetStarted}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
           <View style={styles.buttonContent}>
@@ -68,7 +64,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: 'MarlinSoftBasicBlack',
     fontSize: 46,
-    fontWeight: 'normal',
     letterSpacing: -0.6,
     textAlign: 'center',
   },
@@ -82,12 +77,12 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
+    alignSelf: 'center',
     backgroundColor: colors.green,
     borderRadius: 999,
     justifyContent: 'center',
     minHeight: 68,
     width: '78%',
-    alignSelf: 'center',
   },
   buttonPressed: {
     backgroundColor: colors.greenPressed,

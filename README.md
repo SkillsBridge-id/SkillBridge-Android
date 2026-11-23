@@ -74,6 +74,10 @@ The platform can support school-based programs, classroom enrichment, career gui
 
 ## Getting started
 
+### Contributor and agent guide
+
+Before making changes, read the project instructions in [AGENTS.md](AGENTS.md). For cloning, branching, scoped edits, validation, commits, and pull requests, follow the step-by-step guide in [contribution.md](contribution.md).
+
 ### Prerequisites
 
 - Node.js (LTS recommended)
@@ -100,16 +104,21 @@ Run the project checks with:
 
 ```bash
 npm run lint
+npm run typecheck
+npx expo-doctor
 ```
 
 ## Project structure
 
 ```text
 .
-├── assets/          # App icons, splash art, and fonts
-├── index.js         # Native application entry point
-├── app.json         # Expo configuration
-└── package.json     # Scripts and dependencies
+├── assets/             # App icons, splash art, and fonts
+├── src/app/            # Expo Router screens and tab routes
+├── src/components/     # Shared UI components
+├── AGENTS.md           # Project instructions for agents
+├── contribution.md     # Contribution and pull request guide
+├── app.json            # Expo configuration
+└── package.json        # Scripts and dependencies
 ```
 
 ## Product principles

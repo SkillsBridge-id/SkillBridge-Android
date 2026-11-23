@@ -2,6 +2,32 @@
 
 Thanks for contributing! Keep changes focused, easy to review, and isolated to the screen or feature you are working on.
 
+Project and agent conventions live in [AGENTS.md](AGENTS.md). Read it before changing Expo or React Native code.
+
+## Fork the repository
+
+For external contributions, create your own fork on GitHub first. Do not push feature branches directly to the upstream repository.
+
+```bash
+git clone https://github.com/<your-username>/<repository>.git
+cd SkillsBridge-Android
+git remote add upstream https://github.com/<owner>/<repository>.git
+git remote -v
+npm install
+```
+
+Keep `origin` pointed at your fork and `upstream` pointed at the main repository. Sync your local `main` from upstream before starting work:
+
+```bash
+git switch main
+git fetch upstream
+git pull --ff-only upstream main
+git push origin main
+git switch -c feature/short-description
+```
+
+If you already have a local checkout, add the remotes instead of cloning into another nested directory.
+
 ## Clone the repository
 
 Clone the repository once, then work from the project directory:
@@ -31,7 +57,7 @@ git pull origin main
 
 ## Before you start
 
-1. Pull the latest `main` branch.
+1. Fork the repository and sync your local `main` from `upstream`.
 2. Create a new branch for the task. Never make task changes directly on `main`.
 3. Run `npm install` from the project root.
 4. Read `AGENTS.md` for the Expo and React Native project conventions.
@@ -42,7 +68,8 @@ Start every change from an up-to-date `main` branch:
 
 ```bash
 git switch main
-git pull origin main
+git fetch upstream
+git pull --ff-only upstream main
 git switch -c feature/short-description
 ```
 
@@ -100,7 +127,7 @@ git commit -m "Describe the focused change"
 git push -u origin feature/short-description
 ```
 
-Open a pull request from your feature branch into `main` in the repository host. The PR description should include:
+Open a pull request from `your-username:feature/short-description` into `owner:main` in the repository host. The PR description should include:
 
 1. A short summary of the change.
 2. The files or routes changed.

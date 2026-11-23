@@ -1,5 +1,7 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+For the complete fork, branch, contribution, validation, and pull request workflow, follow [contribution.md](contribution.md). Keep this file open while making agent-assisted changes; the contribution guide explains the repository workflow around these project rules.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:

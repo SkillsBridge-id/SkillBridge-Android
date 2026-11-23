@@ -4,9 +4,28 @@ Thanks for contributing! Keep changes focused, easy to review, and isolated to t
 
 ## Before you start
 
-1. Pull the latest changes from the branch you are working on.
-2. Run `npm install` from the project root.
-3. Read `AGENTS.md` for the Expo and React Native project conventions.
+1. Pull the latest `main` branch.
+2. Create a new branch for the task. Never make task changes directly on `main`.
+3. Run `npm install` from the project root.
+4. Read `AGENTS.md` for the Expo and React Native project conventions.
+
+## Branch workflow
+
+Start every change from an up-to-date `main` branch:
+
+```bash
+git switch main
+git pull origin main
+git switch -c feature/short-description
+```
+
+Use a descriptive branch name, such as:
+
+- `feature/explore-screen`
+- `fix/profile-spacing`
+- `chore/update-contribution-guide`
+
+Keep the branch focused on one task. Do not push directly to `main`, force-push shared branches, or include unrelated formatting changes.
 
 ## Keep changes scoped
 
@@ -41,3 +60,25 @@ In your handoff or pull request, include:
 - What changed and which files were edited.
 - How the change was tested.
 - Any known limitations or follow-up work.
+
+## Open a pull request
+
+After the checks pass, review the diff and commit only the intended files:
+
+```bash
+git status
+git diff
+git add path/to/changed-file another-file
+git commit -m "Describe the focused change"
+git push -u origin feature/short-description
+```
+
+Open a pull request from your feature branch into `main` in the repository host. The PR description should include:
+
+1. A short summary of the change.
+2. The files or routes changed.
+3. How the change was tested.
+4. Screenshots or a short recording for visual changes.
+5. Any known limitations or follow-up work.
+
+Before requesting review, confirm that the PR contains only the intended task changes and that CI is passing. Resolve review comments on the branch, push the updates, and merge only through the approved PR process.

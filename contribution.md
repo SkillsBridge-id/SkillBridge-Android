@@ -2,6 +2,33 @@
 
 Thanks for contributing! Keep changes focused, easy to review, and isolated to the screen or feature you are working on.
 
+## Clone the repository
+
+Clone the repository once, then work from the project directory:
+
+```bash
+git clone <repository-url>
+cd SkillsBridge-Android
+npm install
+git status
+```
+
+Use the repository URL provided by the team. HTTPS and SSH are both valid:
+
+```bash
+git clone https://github.com/<owner>/<repository>.git
+# or
+git clone git@github.com:<owner>/<repository>.git
+```
+
+If the project has already been cloned, do not clone it again into a nested directory. Update the existing checkout instead:
+
+```bash
+cd SkillsBridge-Android
+git switch main
+git pull origin main
+```
+
 ## Before you start
 
 1. Pull the latest `main` branch.

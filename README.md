@@ -100,6 +100,22 @@ npm run ios
 npm run web
 ```
 
+### Backend API
+
+Copy `.env.example` to `.env.local` and point the app at the SkillBridge Backend:
+
+```dotenv
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8787
+```
+
+The committed API contract is `src/api/schema/openapi.json`. Regenerate the typed schema after updating that snapshot:
+
+```bash
+npm run api:generate
+```
+
+Public mission routes work without authentication. Protected student routes require a Supabase access token supplied through `configureApiAuth` in `src/api/client.js`. Never place service-role keys, database credentials, ID tokens, or refresh tokens in the app.
+
 Run the project checks with:
 
 ```bash
@@ -114,6 +130,7 @@ npx expo-doctor
 .
 ├── assets/             # App icons, splash art, and fonts
 ├── src/app/            # Expo Router screens and tab routes
+├── src/api/            # Typed backend client and pinned OpenAPI contract
 ├── src/components/     # Shared UI components
 ├── AGENTS.md           # Project instructions for agents
 ├── contribution.md     # Contribution and pull request guide

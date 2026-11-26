@@ -8,7 +8,7 @@ export default function NotFoundScreen() {
       <StatusBar style="dark" />
       <View style={styles.content}>
         <Text style={styles.title}>Page not found</Text>
-        <Link href="/" style={styles.link}>Return to SkillsBridge</Link>
+        <Link href="/" style={styles.link}>Return to SkillBridge</Link>
       </View>
     </SafeAreaView>
   );

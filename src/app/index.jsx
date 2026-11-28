@@ -20,7 +20,7 @@ export default function LandingScreen() {
       <StatusBar style="dark" />
       <View style={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.title}>SkillsBridge</Text>
+          <Text style={styles.title}>SkillBridge</Text>
           <Text style={styles.subtitle}>Learn. Practice. Build. Transcend.</Text>
         </View>
 

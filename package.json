@@ -1,8 +1,9 @@
 {
-  "name": "skillsbridge-android",
+  "name": "skillbridge-android",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~58.0.26",
     "expo-constants": "~58.0.16",
     "expo-font": "~58.0.12",
@@ -22,12 +23,14 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api:generate": "openapi-typescript src/api/schema/openapi.json -o src/api/schema/generated.d.ts"
   },
   "private": true,
   "devDependencies": {
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
-    "eslint-config-expo": "~58.0.4"
+    "eslint-config-expo": "~58.0.4",
+    "openapi-typescript": "^7.13.0"
   }
 }

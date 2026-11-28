@@ -1,4 +1,4 @@
-# Contributing to SkillsBridge
+# Contributing to SkillBridge
 
 Thanks for contributing! Keep changes focused, easy to review, and isolated to the screen or feature you are working on.
 
@@ -10,7 +10,7 @@ For external contributions, create your own fork on GitHub first. Do not push fe
 
 ```bash
 git clone https://github.com/<your-username>/<repository>.git
-cd SkillsBridge-Android
+cd SkillBridge-Android
 git remote add upstream https://github.com/<owner>/<repository>.git
 git remote -v
 npm install
@@ -34,7 +34,7 @@ Clone the repository once, then work from the project directory:
 
 ```bash
 git clone <repository-url>
-cd SkillsBridge-Android
+cd SkillBridge-Android
 npm install
 git status
 ```
@@ -50,7 +50,7 @@ git clone git@github.com:<owner>/<repository>.git
 If the project has already been cloned, do not clone it again into a nested directory. Update the existing checkout instead:
 
 ```bash
-cd SkillsBridge-Android
+cd SkillBridge-Android
 git switch main
 git pull origin main
 ```

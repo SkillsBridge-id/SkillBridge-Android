@@ -1,0 +1,174 @@
+name: Release Android APK
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag and main ancestry
+        env:
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Release tags must use semantic versioning, for example v1.1.2."
+            exit 1
+          fi
+
+          git fetch --no-tags origin main
+          tag_commit="$(git rev-list -n 1 "$GITHUB_REF")"
+
+          if ! git merge-base --is-ancestor "$tag_commit" origin/main; then
+            echo "Release tag $TAG must point to a commit contained in origin/main."
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run project checks
+        run: |
+          npm run lint
+          npm run typecheck
+          npx expo-doctor
+          npm run api:generate
+          git diff --exit-code -- src/api/schema/generated.d.ts
+
+      - name: Sync manifest versions to release tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const version = process.env.TAG.replace(/^v/, '');
+          const [major, minor, patch] = version
+            .split(/[-+]/)[0]
+            .split('.')
+            .map(Number);
+
+          if (minor > 999 || patch > 999) {
+            throw new Error('Android releases require minor and patch versions below 1000.');
+          }
+
+          const versionCode = major * 1_000_000 + minor * 1_000 + patch;
+
+          if (!Number.isSafeInteger(versionCode) || versionCode < 1 || versionCode > 2_100_000_000) {
+            throw new Error(`Version ${version} cannot be represented as an Android versionCode.`);
+          }
+
+          const updateJson = (path, mutate) => {
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            mutate(data);
+            fs.writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
+          };
+
+          updateJson('package.json', (pkg) => {
+            pkg.version = version;
+          });
+          updateJson('package-lock.json', (lock) => {
+            lock.version = version;
+            if (lock.packages?.['']) lock.packages[''].version = version;
+          });
+          updateJson('app.json', (config) => {
+            config.expo.version = version;
+            config.expo.android = {
+              ...(config.expo.android || {}),
+              versionCode,
+            };
+          });
+          NODE
+
+      - name: Validate production public env vars
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.EXPO_PUBLIC_API_BASE_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in EXPO_PUBLIC_API_BASE_URL EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required GitHub Actions variable: $name"
+              exit 1
+            fi
+          done
+
+      - name: Generate the Android project
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.EXPO_PUBLIC_API_BASE_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: CI=1 npx expo prebuild --platform android --no-install --clean
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.EXPO_PUBLIC_API_BASE_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: ./gradlew app:assembleRelease --stacktrace
+
+      - name: Package and verify release APK
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          apk_name="SkillBridge-${TAG}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$apk_name"
+          test -s "$apk_name"
+          unzip -l "$apk_name" | grep -q "assets/index.android.bundle"
+          sha256sum "$apk_name" > "${apk_name}.sha256"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          apk_name="SkillBridge-${TAG}.apk"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$apk_name" "${apk_name}.sha256" --clobber
+            gh release edit "$TAG" --draft=false --latest
+          else
+            gh release create "$TAG" "$apk_name" "${apk_name}.sha256" \
+              --title "SkillBridge ${TAG}" \
+              --generate-notes \
+              --latest \
+              --verify-tag
+          fi

@@ -4,7 +4,13 @@ const apiBaseUrl = (
   process.env.EXPO_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
 ).replace(/\/$/, '');
 
-/** @type {{ getAccessToken: () => Promise<string | null>, refreshAccessToken: () => Promise<string | null> }} */
+/**
+ * @type {{
+ *   getAccessToken: () => Promise<string | null>,
+ *   refreshAccessToken: () => Promise<string | null>,
+ *   onUnauthorized?: () => void,
+ * }}
+ */
 let authProvider = {
   getAccessToken: async () => null,
   refreshAccessToken: async () => null,
@@ -27,12 +33,17 @@ export class ApiError extends Error {
  * Connect this once Supabase Auth is configured. Both functions must return a
  * Supabase access token, never an ID token or refresh token.
  *
- * @param {{ getAccessToken: () => Promise<string | null>, refreshAccessToken?: () => Promise<string | null> }} provider
+ * @param {{
+ *   getAccessToken: () => Promise<string | null>,
+ *   refreshAccessToken?: () => Promise<string | null>,
+ *   onUnauthorized?: () => void,
+ * }} provider
  */
 export function configureApiAuth(provider) {
   authProvider = {
     getAccessToken: provider.getAccessToken,
     refreshAccessToken: provider.refreshAccessToken ?? provider.getAccessToken,
+    onUnauthorized: provider.onUnauthorized,
   };
 }
 
@@ -81,6 +92,10 @@ export async function apiRequest(path, options = {}) {
 
     const payload = await readJson(response);
 
+    if (response.status === 401 && auth) {
+      authProvider.onUnauthorized?.();
+    }
+
     if (!response.ok || !payload?.success) {
       const error = payload?.error;
       throw new ApiError({
@@ -93,6 +108,35 @@ export async function apiRequest(path, options = {}) {
 
     return payload.data;
   }
+}
+
+/**
+ * Operational health endpoints return their payload directly without the API envelope.
+ *
+ * @template T
+ * @param {string} path
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<T>}
+ */
+export async function apiRawRequest(path, signal) {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    headers: { Accept: 'application/json' },
+    method: 'GET',
+    signal,
+  });
+
+  const payload = await readJson(response);
+
+  if (!response.ok) {
+    throw new ApiError({
+      code: payload?.error?.code,
+      message: payload?.error?.message ?? `Request failed with status ${response.status}`,
+      requestId: payload?.requestId,
+      status: response.status,
+    });
+  }
+
+  return payload;
 }
 
 /** @param {Response} response */

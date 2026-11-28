@@ -4,28 +4,51 @@ import { StatusBar } from 'expo-status-bar';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { skillBridgeApi } from '../../api/skillbridge';
+import { useAuth } from '../../auth/AuthContext';
+import ApiStateBanner from '../../components/ApiStateBanner';
 import { useApiResource } from '../../hooks/useApiResource';
 
 const mascotImageUrl = 'https://placehold.co/600x600.png';
 /** @typedef {React.ComponentProps<typeof Ionicons>['name']} IoniconName */
-/** @type {Array<{ icon: IoniconName, label: string, value: string }>} */
-const stats = [
-  { icon: 'flame', label: 'Day Streak', value: '12' },
-  { icon: 'trophy', label: 'Badges', value: '8' },
-  { icon: 'star', label: 'Total XP', value: '2.4k' },
-];
-/** @type {IoniconName[]} */
-const achievementIcons = ['trophy', 'ribbon', 'locate', 'diamond'];
-/** @type {Array<{ icon: IoniconName, label: string, route?: '/progress' | '/rewards' }>} */
+/** @type {Array<{ icon: IoniconName, label: string, route: '/progress' | '/rewards' | '/history' | '/settings' }>} */
 const menuItems = [
   { icon: 'stats-chart-outline', label: 'Skill Progress', route: '/progress' },
   { icon: 'gift-outline', label: 'Rewards', route: '/rewards' },
-  { icon: 'time-outline', label: 'Learning History' },
-  { icon: 'settings-outline', label: 'Account Settings' },
+  { icon: 'time-outline', label: 'Learning History', route: '/history' },
+  { icon: 'settings-outline', label: 'Account Settings', route: '/settings' },
 ];
 
 export default function ProfileScreen() {
-  const { data: profile } = useApiResource(skillBridgeApi.getProfile);
+  const { isAuthenticated, user } = useAuth();
+
+  const {
+    data: profile,
+    error: profileError,
+    refresh: refreshProfile,
+  } = useApiResource(skillBridgeApi.getProfile, { enabled: isAuthenticated });
+  const {
+    data: progress,
+    error: progressError,
+    refresh: refreshProgress,
+  } = useApiResource(skillBridgeApi.getProgress, { enabled: isAuthenticated });
+  const {
+    data: achievements,
+    error: achievementsError,
+    refresh: refreshAchievements,
+  } = useApiResource(skillBridgeApi.getAchievements, { enabled: isAuthenticated });
+
+  const unlockedCount = (achievements ?? []).filter((item) => item.unlocked).length;
+  const stats = [
+    { icon: /** @type {const} */ ('flame'), label: 'Day Streak', value: String(progress?.currentStreak ?? 0) },
+    { icon: /** @type {const} */ ('trophy'), label: 'Badges', value: String(unlockedCount) },
+    { icon: /** @type {const} */ ('star'), label: 'Total XP', value: String(progress?.totalXp ?? 0) },
+  ];
+
+  const handleRetry = () => {
+    refreshProfile();
+    refreshProgress();
+    refreshAchievements();
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -33,17 +56,32 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
           <Text style={styles.pageTitle}>Profile</Text>
-          <Pressable accessibilityLabel="Settings" style={styles.settingsButton}>
+          <Pressable
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+            style={styles.settingsButton}
+          >
             <Ionicons color="#253A41" name="settings-outline" size={21} />
           </Pressable>
         </View>
 
+        <View style={styles.bannerWrap}>
+          <ApiStateBanner
+            error={profileError ?? progressError ?? achievementsError}
+            isAuthenticated={isAuthenticated}
+            onRetry={handleRetry}
+          />
+        </View>
+
         <View style={styles.identity}>
           <View style={styles.avatarRing}>
-            <Image source={{ uri: mascotImageUrl }} style={styles.avatar} />
+            <Image
+              source={{ uri: profile?.avatarUrl || mascotImageUrl }}
+              style={styles.avatar}
+            />
           </View>
-          <Text style={styles.name}>{profile?.displayName || 'Celine'}</Text>
-          <Text style={styles.handle}>@celineee</Text>
+          <Text style={styles.name}>{profile?.displayName || 'Learner'}</Text>
+          <Text style={styles.handle}>{profile?.bio || user?.email || 'Not signed in'}</Text>
         </View>
 
         <View style={styles.statsRow}>
@@ -63,22 +101,30 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
         <View style={styles.achievementRow}>
-          {achievementIcons.map((icon, index) => (
-            <View key={icon} style={styles.achievementBadge}>
+          {(achievements ?? []).slice(0, 4).map((item) => (
+            <View
+              key={item.code}
+              style={[styles.achievementBadge, !item.unlocked && styles.achievementLocked]}
+            >
               <Ionicons
-                color={['#F1AA15', '#4B8FE8', '#EC665D', '#D99A18'][index]}
-                name={icon}
-                size={27}
+                color={item.unlocked ? '#F1AA15' : '#A8B5B2'}
+                name={item.unlocked ? 'trophy' : 'lock-closed-outline'}
+                size={24}
               />
             </View>
           ))}
+          {(!achievements || achievements.length === 0) ? (
+            <Text style={styles.emptyAchievements}>
+              {isAuthenticated ? 'No achievements loaded yet.' : 'Sign in to view achievements.'}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.menu}>
           {menuItems.map((item, index) => (
             <Pressable
               key={item.label}
-              onPress={() => item.route && router.push(item.route)}
+              onPress={() => router.push(item.route)}
               style={[styles.menuRow, index > 0 && styles.menuDivider]}
             >
               <Ionicons color="#3A535A" name={item.icon} size={21} />
@@ -109,7 +155,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
   },
-  identity: { alignItems: 'center', marginTop: 22 },
+  bannerWrap: { marginTop: 14 },
+  identity: { alignItems: 'center', marginTop: 12 },
   avatarRing: {
     alignItems: 'center',
     backgroundColor: '#E1F6ED',
@@ -120,7 +167,7 @@ const styles = StyleSheet.create({
   },
   avatar: { borderRadius: 40, height: 80, width: 80 },
   name: { color: '#172A31', fontSize: 21, fontWeight: '800', marginTop: 12 },
-  handle: { color: '#6B7B80', fontSize: 13, marginTop: 3 },
+  handle: { color: '#6B7B80', fontSize: 13, marginTop: 3, textAlign: 'center' },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 22 },
   statCard: {
     alignItems: 'center',
@@ -153,12 +200,14 @@ const styles = StyleSheet.create({
   },
   achievementBadge: {
     alignItems: 'center',
-    backgroundColor: '#F5F8F7',
+    backgroundColor: '#FFF7DF',
     borderRadius: 14,
     height: 48,
     justifyContent: 'center',
     width: 48,
   },
+  achievementLocked: { backgroundColor: '#F5F8F7' },
+  emptyAchievements: { color: '#6B7B80', fontSize: 12 },
   menu: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E7EFEC',

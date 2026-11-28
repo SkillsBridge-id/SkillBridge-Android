@@ -3,14 +3,16 @@ import { useCallback, useEffect, useState } from 'react';
 /**
  * @template T
  * @param {(signal: AbortSignal) => Promise<T>} loader
+ * @param {{ enabled?: boolean }} [options]
  */
-export function useApiResource(loader) {
+export function useApiResource(loader, options = {}) {
+  const { enabled = true } = options;
   const [state, setState] = useState(
     /** @type {{ data: T | null, error: unknown, loading: boolean, revision: number }} */ ({
-    data: null,
-    error: null,
-    loading: true,
-    revision: 0,
+      data: null,
+      error: null,
+      loading: enabled,
+      revision: 0,
     }),
   );
 
@@ -18,12 +20,16 @@ export function useApiResource(loader) {
     setState((current) => ({
       ...current,
       error: null,
-      loading: true,
+      loading: enabled,
       revision: current.revision + 1,
     }));
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
     const controller = new AbortController();
 
     loader(controller.signal)
@@ -37,12 +43,12 @@ export function useApiResource(loader) {
       });
 
     return () => controller.abort();
-  }, [loader, state.revision]);
+  }, [enabled, loader, state.revision]);
 
   return {
-    data: state.data,
-    error: state.error,
-    loading: state.loading,
+    data: enabled ? state.data : null,
+    error: enabled ? state.error : null,
+    loading: enabled ? state.loading : false,
     refresh,
   };
 }

@@ -4,18 +4,36 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { skillBridgeApi } from '../api/skillbridge';
+import { useAuth } from '../auth/AuthContext';
+import ApiStateBanner from '../components/ApiStateBanner';
 import ScreenHeader from '../components/ScreenHeader';
+import { useApiResource } from '../hooks/useApiResource';
 
-/** @typedef {React.ComponentProps<typeof Ionicons>['name']} IoniconName */
-/** @type {Array<{ icon: IoniconName, left: `${number}%`, locked: boolean, top: number }>} */
-const nodes = [
-  { icon: 'book', left: '53%', locked: false, top: 34 },
-  { icon: 'lock-closed', left: '24%', locked: true, top: 132 },
-  { icon: 'lock-closed', left: '58%', locked: true, top: 222 },
-  { icon: 'lock-closed', left: '35%', locked: true, top: 315 },
+const nodePositions = [
+  { left: /** @type {const} */ ('53%'), top: 34 },
+  { left: /** @type {const} */ ('24%'), top: 132 },
+  { left: /** @type {const} */ ('58%'), top: 222 },
+  { left: /** @type {const} */ ('35%'), top: 315 },
 ];
 
 export default function JourneyScreen() {
+  const { isAuthenticated } = useAuth();
+  const {
+    data: missions,
+    error: missionsError,
+    refresh: refreshMissions,
+  } = useApiResource(skillBridgeApi.getMissions);
+
+  const { data: recommendations } = useApiResource(skillBridgeApi.getRecommendations, {
+    enabled: isAuthenticated,
+  });
+
+  const activeMissionId =
+    recommendations?.recommendations[0]?.missionId ?? missions?.[0]?.id ?? null;
+  const activeMission =
+    missions?.find((item) => item.id === activeMissionId) ?? missions?.[0] ?? null;
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
@@ -23,30 +41,52 @@ export default function JourneyScreen() {
         <ScreenHeader subtitle="Your learning path" title="Learning Journey" />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
+        <ApiStateBanner error={missionsError} onRetry={refreshMissions} />
+
         <LinearGradient colors={['#BFEFD1', '#E9F7D6']} style={styles.map}>
           <View style={styles.pathOne} />
           <View style={styles.pathTwo} />
-          {nodes.map((node, index) => (
-            <View
-              key={`${node.left}-${node.top}`}
-              style={[styles.node, { left: node.left, top: node.top }, !node.locked && styles.nodeActive]}
-            >
-              <Ionicons
-                color={node.locked ? '#8C9B9E' : '#16B276'}
-                name={node.icon}
-                size={index === 0 ? 28 : 21}
-              />
-            </View>
-          ))}
+          {nodePositions.map((pos, index) => {
+            const mission = missions?.[index];
+            const isUnlocked = Boolean(mission);
+
+            return (
+              <Pressable
+                key={`${pos.left}-${pos.top}`}
+                disabled={!mission}
+                onPress={() => mission && router.push(`/mission/${mission.id}`)}
+                style={[
+                  styles.node,
+                  { left: pos.left, top: pos.top },
+                  index === 0 && isUnlocked && styles.nodeActive,
+                ]}
+              >
+                <Ionicons
+                  color={isUnlocked ? '#16B276' : '#8C9B9E'}
+                  name={isUnlocked ? 'book' : 'lock-closed'}
+                  size={index === 0 ? 28 : 21}
+                />
+              </Pressable>
+            );
+          })}
           <View style={styles.chapterCard}>
             <View style={styles.chapterIcon}>
               <Ionicons color="#16A873" name="book-outline" size={23} />
             </View>
             <View style={styles.chapterCopy}>
-              <Text style={styles.chapterLabel}>Chapter 1</Text>
-              <Text style={styles.chapterTitle}>Introduction to Economics</Text>
+              <Text style={styles.chapterLabel}>
+                {activeMission ? 'Next Mission' : 'Catalog'}
+              </Text>
+              <Text numberOfLines={1} style={styles.chapterTitle}>
+                {activeMission?.title ?? 'Browse Missions'}
+              </Text>
             </View>
-            <Pressable onPress={() => router.push('/quiz')} style={styles.startButton}>
+            <Pressable
+              onPress={() =>
+                router.push(activeMission ? `/mission/${activeMission.id}` : '/explore')
+              }
+              style={styles.startButton}
+            >
               <Ionicons color="#FFFFFF" name="play" size={16} />
               <Text style={styles.startLabel}>Start</Text>
             </Pressable>
@@ -115,7 +155,7 @@ const styles = StyleSheet.create({
     marginRight: 11,
     width: 46,
   },
-  chapterCopy: { flex: 1 },
+  chapterCopy: { flex: 1, marginRight: 8 },
   chapterLabel: { color: '#78868A', fontSize: 10 },
   chapterTitle: { color: '#203239', fontSize: 13, fontWeight: '700', marginTop: 3 },
   startButton: {

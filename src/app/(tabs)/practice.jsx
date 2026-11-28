@@ -3,55 +3,83 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-/** @typedef {React.ComponentProps<typeof Ionicons>['name']} IoniconName */
-/** @type {Array<{ icon: IoniconName, lessons: number, title: string }>} */
-const practiceSets = [
-  { icon: 'briefcase-outline', lessons: 6, title: 'Workplace Basics' },
-  { icon: 'chatbubbles-outline', lessons: 4, title: 'Communication' },
-  { icon: 'analytics-outline', lessons: 5, title: 'Business Thinking' },
-];
+import { skillBridgeApi } from '../../api/skillbridge';
+import { useAuth } from '../../auth/AuthContext';
+import ApiStateBanner from '../../components/ApiStateBanner';
+import { useApiResource } from '../../hooks/useApiResource';
 
 export default function PracticeScreen() {
+  const { isAuthenticated } = useAuth();
+
+  const {
+    data: missions,
+    error: missionsError,
+    refresh: refreshMissions,
+  } = useApiResource(skillBridgeApi.getMissions);
+
+  const { data: recommendations } = useApiResource(skillBridgeApi.getRecommendations, {
+    enabled: isAuthenticated,
+  });
+
+  const topRecommendation = recommendations?.recommendations[0] ?? null;
+  const heroMission = topRecommendation
+    ? { id: topRecommendation.missionId, title: topRecommendation.title, subtitle: topRecommendation.reason }
+    : missions?.[0]
+      ? { id: missions[0].id, title: missions[0].title, subtitle: missions[0].summary }
+      : null;
+
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Practice</Text>
         <Text style={styles.subtitle}>
-          Build confidence with focused, bite-sized challenges.
+          Build confidence with focused mission challenges.
         </Text>
+
+        <View style={styles.bannerWrap}>
+          <ApiStateBanner error={missionsError} onRetry={refreshMissions} />
+        </View>
 
         <View style={styles.heroCard}>
           <View style={styles.heroIcon}>
             <Ionicons color="#16B276" name="school" size={34} />
           </View>
-          <Text style={styles.heroEyebrow}>TODAY&apos;S PRACTICE</Text>
-          <Text style={styles.heroTitle}>Economic Policy Basics</Text>
-          <Text style={styles.heroText}>3 questions · About 5 minutes</Text>
-          <Pressable onPress={() => router.push('/quiz')} style={styles.primaryButton}>
+          <Text style={styles.heroEyebrow}>
+            {topRecommendation ? 'RECOMMENDED MISSION' : 'FEATURED MISSION'}
+          </Text>
+          <Text style={styles.heroTitle}>{heroMission?.title ?? 'Explore Missions'}</Text>
+          <Text numberOfLines={3} style={styles.heroText}>
+            {heroMission?.subtitle ?? 'Pick a mission to read its rubric and submit your response.'}
+          </Text>
+          <Pressable
+            onPress={() => router.push(heroMission ? `/mission/${heroMission.id}` : '/explore')}
+            style={styles.primaryButton}
+          >
             <Ionicons color="#FFFFFF" name="play" size={17} />
             <Text style={styles.primaryLabel}>Start practice</Text>
           </Pressable>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Practice sets</Text>
-          <Text style={styles.sectionMeta}>15 lessons</Text>
+          <Text style={styles.sectionTitle}>Available missions</Text>
+          <Text style={styles.sectionMeta}>{missions?.length ?? 0} missions</Text>
         </View>
 
-        {practiceSets.map((item, index) => (
+        {(missions ?? []).map((item, index) => (
           <Pressable
-            key={item.title}
-            onPress={() => router.push('/quiz')}
+            key={item.id}
+            onPress={() => router.push(`/mission/${item.id}`)}
             style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}
           >
             <View style={styles.rowIcon}>
-              <Ionicons color="#16A873" name={item.icon} size={23} />
+              <Ionicons color="#16A873" name="document-text-outline" size={23} />
             </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>{item.title}</Text>
-              <Text style={styles.rowMeta}>{item.lessons} lessons</Text>
+              <Text numberOfLines={1} style={styles.rowMeta}>
+                {item.summary}
+              </Text>
             </View>
             <View style={styles.numberBadge}>
               <Text style={styles.numberText}>{index + 1}</Text>
@@ -68,11 +96,12 @@ const styles = StyleSheet.create({
   content: { padding: 22, paddingBottom: 30 },
   title: { color: '#12212C', fontSize: 29, fontWeight: '800' },
   subtitle: { color: '#68777D', fontSize: 14, lineHeight: 20, marginTop: 6 },
+  bannerWrap: { marginTop: 14 },
   heroCard: {
     alignItems: 'center',
     backgroundColor: '#E7F7F0',
     borderRadius: 24,
-    marginTop: 22,
+    marginTop: 8,
     padding: 22,
   },
   heroIcon: {
@@ -97,7 +126,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
     textAlign: 'center',
   },
-  heroText: { color: '#64767B', fontSize: 13, marginTop: 6 },
+  heroText: { color: '#64767B', fontSize: 13, marginTop: 6, textAlign: 'center' },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: '#16B276',
@@ -136,7 +165,7 @@ const styles = StyleSheet.create({
     marginRight: 13,
     width: 46,
   },
-  rowBody: { flex: 1 },
+  rowBody: { flex: 1, marginRight: 8 },
   rowTitle: { color: '#20333A', fontSize: 15, fontWeight: '700' },
   rowMeta: { color: '#75858A', fontSize: 12, marginTop: 4 },
   numberBadge: {

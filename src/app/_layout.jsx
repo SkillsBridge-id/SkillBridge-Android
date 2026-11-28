@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, View, Button } from 'react-native';
+import { AuthProvider } from '../auth/AuthContext';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -12,7 +13,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </AuthProvider>
+  );
 }
 
 /**

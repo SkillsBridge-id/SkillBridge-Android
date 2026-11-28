@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import {
@@ -11,78 +12,44 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { skillBridgeApi } from '../../api/skillbridge';
+import { useAuth } from '../../auth/AuthContext';
 import { useApiResource } from '../../hooks/useApiResource';
 
-const categories = ['All', 'Business', 'Technology', 'Communication'];
-/** @typedef {React.ComponentProps<typeof Ionicons>['name']} IoniconName */
-/** @typedef {{ category: string, color: string, icon: IoniconName, level: string, minutes: number, title: string }} Course */
-/** @type {Course[]} */
-const courses = [
-  {
-    category: 'Business',
-    color: '#DDF4EE',
-    icon: 'storefront-outline',
-    level: 'Beginner',
-    minutes: 5,
-    title: 'Digital Economy in Indonesia',
-  },
-  {
-    category: 'Business',
-    color: '#FFF2C7',
-    icon: 'bulb-outline',
-    level: 'Intermediate',
-    minutes: 7,
-    title: 'Entrepreneurship Mindset',
-  },
-  {
-    category: 'Technology',
-    color: '#EAE7FF',
-    icon: 'analytics-outline',
-    level: 'Intermediate',
-    minutes: 10,
-    title: 'Data for Better Decisions',
-  },
-  {
-    category: 'Communication',
-    color: '#FFE8DE',
-    icon: 'chatbubbles-outline',
-    level: 'Beginner',
-    minutes: 6,
-    title: 'Workplace Communication',
-  },
-];
+const statuses = ['All', 'Recommended', 'Published'];
 
 export default function ExploreScreen() {
-  const [activeCategory, setActiveCategory] = useState('All');
+  const { isAuthenticated } = useAuth();
+  const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery] = useState('');
+
   const { data: missions, error, loading, refresh } = useApiResource(
     skillBridgeApi.getMissions,
   );
+  const { data: recommendations } = useApiResource(skillBridgeApi.getRecommendations, {
+    enabled: isAuthenticated,
+  });
 
-  const filteredCourses = useMemo(() => {
+  const recommendedIds = useMemo(
+    () => new Set((recommendations?.recommendations ?? []).map((item) => item.missionId)),
+    [recommendations],
+  );
+
+  const filteredMissions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    /** @type {Course[]} */
-    const availableCourses = missions?.length
-      ? missions.map((mission) => ({
-          category: 'Business',
-          color: '#DDF4EE',
-          icon: 'book-outline',
-          level: mission.status === 'published' ? 'Available' : mission.status,
-          minutes: 5,
-          title: mission.title,
-        }))
-      : courses;
+    return (missions ?? []).filter((mission) => {
+      const matchesFilter =
+        activeFilter === 'All' ||
+        (activeFilter === 'Recommended' && recommendedIds.has(mission.id)) ||
+        (activeFilter === 'Published' && mission.status === 'published');
 
-    return availableCourses.filter((course) => {
-      const matchesCategory =
-        activeCategory === 'All' || course.category === activeCategory;
       const matchesQuery =
         normalizedQuery.length === 0 ||
-        course.title.toLowerCase().includes(normalizedQuery);
+        mission.title.toLowerCase().includes(normalizedQuery) ||
+        mission.summary.toLowerCase().includes(normalizedQuery);
 
-      return matchesCategory && matchesQuery;
+      return matchesFilter && matchesQuery;
     });
-  }, [activeCategory, missions, query]);
+  }, [activeFilter, missions, query, recommendedIds]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -94,15 +61,15 @@ export default function ExploreScreen() {
       >
         <Text style={styles.title}>Explore</Text>
         <Text style={styles.subtitle}>
-          Find short lessons built for your next career step.
+          Browse SkillBridge missions and submit your work.
         </Text>
 
         <View style={styles.searchBox}>
           <Ionicons color="#63747A" name="search" size={20} />
           <TextInput
-            accessibilityLabel="Search skills"
+            accessibilityLabel="Search missions"
             onChangeText={setQuery}
-            placeholder="Search skills..."
+            placeholder="Search missions..."
             placeholderTextColor="#91A09F"
             style={styles.searchInput}
             value={query}
@@ -119,17 +86,17 @@ export default function ExploreScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
         >
-          {categories.map((category) => {
-            const isActive = category === activeCategory;
+          {statuses.map((filter) => {
+            const isActive = filter === activeFilter;
 
             return (
               <Pressable
-                key={category}
-                onPress={() => setActiveCategory(category)}
+                key={filter}
+                onPress={() => setActiveFilter(filter)}
                 style={[styles.chip, isActive && styles.chipActive]}
               >
                 <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                  {category}
+                  {filter}
                 </Text>
               </Pressable>
             );
@@ -137,15 +104,15 @@ export default function ExploreScreen() {
         </ScrollView>
 
         <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>Recommended for you</Text>
-          <Text style={styles.resultCount}>{filteredCourses.length} lessons</Text>
+          <Text style={styles.sectionTitle}>Missions</Text>
+          <Text style={styles.resultCount}>{filteredMissions.length} missions</Text>
         </View>
 
         {error ? (
           <Pressable onPress={refresh} style={styles.apiNotice}>
             <Ionicons color="#64767B" name="cloud-offline-outline" size={18} />
             <Text style={styles.apiNoticeText}>
-              Backend unavailable. Showing starter lessons. Tap to retry.
+              {error instanceof Error ? error.message : 'Backend unavailable.'} Tap to retry.
             </Text>
           </Pressable>
         ) : null}
@@ -154,31 +121,39 @@ export default function ExploreScreen() {
           <Text style={styles.loadingText}>Loading mission catalog…</Text>
         ) : null}
 
-        {filteredCourses.map((course) => (
-          <Pressable
-            key={course.title}
-            style={({ pressed }) => [styles.courseCard, pressed && styles.pressed]}
-          >
-            <View style={[styles.courseIcon, { backgroundColor: course.color }]}>
-              <Ionicons color="#16A873" name={course.icon} size={27} />
-            </View>
-            <View style={styles.courseBody}>
-              <Text numberOfLines={2} style={styles.courseTitle}>
-                {course.title}
-              </Text>
-              <Text style={styles.courseMeta}>
-                {course.minutes} min · {course.level}
-              </Text>
-            </View>
-            <Ionicons color="#53666C" name="chevron-forward" size={21} />
-          </Pressable>
-        ))}
+        {filteredMissions.map((mission) => {
+          const isRecommended = recommendedIds.has(mission.id);
+          return (
+            <Pressable
+              key={mission.id}
+              onPress={() => router.push(`/mission/${mission.id}`)}
+              style={({ pressed }) => [styles.courseCard, pressed && styles.pressed]}
+            >
+              <View style={styles.courseIcon}>
+                <Ionicons color="#16A873" name="book-outline" size={25} />
+              </View>
+              <View style={styles.courseBody}>
+                <Text numberOfLines={2} style={styles.courseTitle}>
+                  {mission.title}
+                </Text>
+                <Text numberOfLines={2} style={styles.courseMeta}>
+                  {mission.summary}
+                </Text>
+                <Text style={styles.statusTag}>
+                  {isRecommended ? 'Recommended · ' : ''}
+                  {mission.status}
+                </Text>
+              </View>
+              <Ionicons color="#53666C" name="chevron-forward" size={21} />
+            </Pressable>
+          );
+        })}
 
-        {filteredCourses.length === 0 ? (
+        {!loading && filteredMissions.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons color="#89A49D" name="search-outline" size={34} />
-            <Text style={styles.emptyTitle}>No lessons found</Text>
-            <Text style={styles.emptyText}>Try another search or category.</Text>
+            <Text style={styles.emptyTitle}>No missions found</Text>
+            <Text style={styles.emptyText}>Try another search or filter.</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -254,93 +229,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
-    marginTop: 3,
   },
-  sectionTitle: {
-    color: '#182A31',
-    fontFamily: 'sans-serif',
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  resultCount: {
-    color: '#7A898E',
-    fontFamily: 'sans-serif',
-    fontSize: 12,
-  },
+  sectionTitle: { color: '#182A31', fontSize: 17, fontWeight: '800' },
+  resultCount: { color: '#7B898E', fontSize: 12 },
   apiNotice: {
     alignItems: 'center',
-    backgroundColor: '#EEF4F2',
-    borderRadius: 13,
+    backgroundColor: '#EEF5F3',
+    borderRadius: 14,
     flexDirection: 'row',
+    gap: 10,
     marginBottom: 12,
-    padding: 11,
+    padding: 12,
   },
-  apiNoticeText: {
-    color: '#64767B',
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-    marginLeft: 8,
-  },
-  loadingText: { color: '#75858A', fontSize: 12, marginBottom: 12 },
+  apiNoticeText: { color: '#5A6D73', flex: 1, fontSize: 12 },
+  loadingText: { color: '#64767B', fontSize: 13, marginBottom: 12 },
   courseCard: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#E6EEEC',
     borderRadius: 18,
     borderWidth: 1,
-    elevation: 1,
     flexDirection: 'row',
-    marginBottom: 12,
-    padding: 13,
-    shadowColor: '#163C35',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
+    marginBottom: 11,
+    padding: 14,
   },
   courseIcon: {
     alignItems: 'center',
+    backgroundColor: '#DDF4EE',
     borderRadius: 14,
-    height: 54,
+    height: 50,
     justifyContent: 'center',
     marginRight: 13,
-    width: 54,
+    width: 50,
   },
-  courseBody: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  courseTitle: {
-    color: '#1B2D34',
-    fontFamily: 'sans-serif',
-    fontSize: 15,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-  courseMeta: {
-    color: '#758389',
-    fontFamily: 'sans-serif',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  emptyTitle: {
-    color: '#24383F',
-    fontFamily: 'sans-serif',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-  emptyText: {
-    color: '#76858A',
-    fontFamily: 'sans-serif',
-    fontSize: 13,
-    marginTop: 5,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  courseBody: { flex: 1, marginRight: 8 },
+  courseTitle: { color: '#20333A', fontSize: 15, fontWeight: '700' },
+  courseMeta: { color: '#6E7E83', fontSize: 12, marginTop: 4 },
+  statusTag: { color: '#138E62', fontSize: 11, fontWeight: '700', marginTop: 5 },
+  pressed: { opacity: 0.75 },
+  emptyState: { alignItems: 'center', paddingVertical: 36 },
+  emptyTitle: { color: '#1F3239', fontSize: 16, fontWeight: '700', marginTop: 10 },
+  emptyText: { color: '#75858A', fontSize: 13, marginTop: 4 },
 });
